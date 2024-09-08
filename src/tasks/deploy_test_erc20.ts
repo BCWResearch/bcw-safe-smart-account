@@ -4,6 +4,7 @@ import { task } from "hardhat/config";
 import { AdditionalDeploymentStorage } from "../utils/additional_deployment_storage";
 
 task("deploy-test-erc20", "Deploys erc20 test token and fund desired owners").setAction(async (_, hre) => {
+    const { ethers } = hre;
     const additional_deployments = AdditionalDeploymentStorage.getDeployments();
     const safeProxyAddress = additional_deployments["SafeProxy"];
 
