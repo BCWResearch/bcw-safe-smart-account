@@ -1,3 +1,4 @@
+import fs from "fs";
 import "@nomiclabs/hardhat-ethers";
 import type { HardhatUserConfig, HttpNetworkUserConfig } from "hardhat/types";
 import "@nomiclabs/hardhat-etherscan";
@@ -6,7 +7,7 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import dotenv from "dotenv";
 import yargs from "yargs";
-import { getSingletonFactoryInfo } from "@safe-global/safe-singleton-factory";
+import { getSingletonFactoryInfo, SingletonFactoryInfo } from "@safe-global/safe-singleton-factory";
 
 const argv = yargs
     .option("network", {
@@ -18,7 +19,7 @@ const argv = yargs
 
 // Load environment variables.
 dotenv.config();
-const { NODE_URL, INFURA_KEY, MNEMONIC, ETHERSCAN_API_KEY, PK, SOLIDITY_VERSION, SOLIDITY_SETTINGS } = process.env;
+const { NODE_URL, INFURA_KEY, MNEMONIC, ETHERSCAN_API_KEY, PK, SOLIDITY_VERSION, SOLIDITY_SETTINGS, CUSTOM_RPC } = process.env;
 
 const DEFAULT_MNEMONIC = "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
@@ -38,33 +39,25 @@ if (["mainnet", "rinkeby", "kovan", "goerli", "ropsten", "mumbai", "polygon"].in
 import "./src/tasks/local_verify";
 import "./src/tasks/deploy_contracts";
 import "./src/tasks/show_codesize";
+import "./src/tasks/deploy_proxy";
+import "./src/tasks/deploy_test_erc20";
 import { BigNumber } from "@ethersproject/bignumber";
 import { DeterministicDeploymentInfo } from "hardhat-deploy/dist/types";
 
 const primarySolidityVersion = SOLIDITY_VERSION || "0.7.6";
 const soliditySettings = SOLIDITY_SETTINGS ? JSON.parse(SOLIDITY_SETTINGS) : undefined;
 
+const getCustomSingletonFactoryInfo = (network: string): SingletonFactoryInfo | undefined => {
+    const path = `./singleton-factory-deployments/${network}/deployment.json`;
+    if (fs.existsSync(path)) {
+        return JSON.parse(fs.readFileSync(path, "utf8"));
+    };
+    return undefined;
+}
+
 const deterministicDeployment = (network: string): DeterministicDeploymentInfo => {
     console.log(`Deterministic deployment for network ${network}`);
-    const info =
-    // {
-    //     "gasPrice": 100000000000,
-    //     "gasLimit": 100000,
-    //     "signerAddress": "0x627306090abaB3A6e1400e9345bC60c78a8BEf57",
-    //     "transaction": "0xf8a98085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf38401224980a01fe9be4c26b513775d67a0c2804df30e25733d749d28e3f4a1dbc9aa3d1b6bf5a03180812632be250062828d977867c6fc5722a9c3b7393839ba755331d18e43eb",
-    //     "address": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0"
-    // }
-
-    {
-        "gasPrice": 100000000000,
-        "gasLimit": 100000,
-        "signerAddress": "0x627306090abaB3A6e1400e9345bC60c78a8BEf57",
-        "transaction": "0xf8a98085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf38401224980a01fe9be4c26b513775d67a0c2804df30e25733d749d28e3f4a1dbc9aa3d1b6bf5a03180812632be250062828d977867c6fc5722a9c3b7393839ba755331d18e43eb",
-        "address": "0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0"
-    }
-
-
-    //getSingletonFactoryInfo(parseInt(network));
+    const info = getCustomSingletonFactoryInfo(network) || getSingletonFactoryInfo(parseInt(network));
     if (!info) {
         throw new Error(`
         Safe factory not found for network ${network}. You can request a new deployment at https://github.com/safe-global/safe-singleton-factory.
@@ -77,7 +70,6 @@ const deterministicDeployment = (network: string): DeterministicDeploymentInfo =
         funding: BigNumber.from(info.gasLimit).mul(BigNumber.from(info.gasPrice)).toString(),
         signedTx: info.transaction,
     };
-    // console.log(`Deterministic deployment info: ${JSON.stringify(returnVal)}`);
     return returnVal;
 };
 
@@ -92,8 +84,8 @@ const userConfig: HardhatUserConfig = {
         compilers: [{ version: primarySolidityVersion, settings: soliditySettings }, { version: "0.6.12" }, { version: "0.5.17" }],
     },
     networks: {
-        localhost: {
-            url: "http://127.0.0.1:8545",
+        customnetwork: {
+            url: CUSTOM_RPC || "http://127.0.0.1:8545",
             accounts: {
                 mnemonic: MNEMONIC || DEFAULT_MNEMONIC,
             }

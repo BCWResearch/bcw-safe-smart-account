@@ -1,11 +1,22 @@
-const { ethers } = require("hardhat");
+import "hardhat-deploy";
+import "@nomiclabs/hardhat-ethers";
+import { task } from "hardhat/config";
+import { AdditionalDeploymentStorage } from "../utils/additional_deployment_storage";
 
-
-async function main() {
+task("deploy-proxy", "Deploys the proxy contract").setAction(async (_, hre) => {
+    const { ethers } = hre;
     const [deployer, owner1, owner2, owner3] = await ethers.getSigners();
 
-    const safeProxyFactoryAddress = "0x64b23b4c9e4B5DB4d34abc448ff532Aa38A06BC0"; // SafeProxyFactory address
-    const safeSingletonAddress = "0xe9ED62295c33307518FE1a9d790e7E65A614E8e0";  // Singleton Safe contract address
+    console.log("Deploying Safe contract proxy");
+    const deployments = await hre.deployments.all();
+    const safeProxyFactoryAddress = deployments["SafeProxyFactory"]?.address;
+    const safeSingletonAddress = deployments["Safe"]?.address;
+    if (!safeProxyFactoryAddress || !safeSingletonAddress) {
+        console.error("SafeProxyFactory or Safe contract not found in deployments");
+        return;
+    }
+    console.log("SafeProxyFactory address:", safeProxyFactoryAddress);
+    console.log("Safe address:", safeSingletonAddress);
 
     const SafeProxyFactory = await ethers.getContractAt("SafeProxyFactory", safeProxyFactoryAddress);
 
@@ -17,7 +28,7 @@ async function main() {
     const fallbackHandler = ethers.constants.AddressZero; // Replace this with the fallback handler address if needed
     const paymentToken = ethers.constants.AddressZero;       // Set to AddressZero for ETH
     const payment = 0;                                       // No payment required
-    const paymentReceiver = ethers.constants.AddressZero;     // No specific payment receiver
+    const paymentReceiver = ethers.constants.AddressZero;
 
     // Encoding the setup call for the Safe contract
     const safeInterface = new ethers.utils.Interface([
@@ -36,7 +47,6 @@ async function main() {
         paymentReceiver               // Payment receiver (set to zero)
     ]);
 
-
     // Deploying a proxy using createProxyWithNonce
     const saltNonce = new Date().getTime(); // Random nonce for the proxy 
     const tx = await SafeProxyFactory.createProxyWithNonce(safeSingletonAddress, initializer, saltNonce);
@@ -45,13 +55,11 @@ async function main() {
     const receipt = await tx.wait();
 
     // Get the deployed proxy address from the event
-    const proxyAddress = receipt.events.find(e => e.event === 'ProxyCreation').args.proxy;
+    const proxyAddress = receipt.events.find((e: any) => e.event === 'ProxyCreation').args.proxy;
     console.log("New Safe proxy deployed at:", proxyAddress);
-}
 
-main()
-    .then(() => process.exit(0))
-    .catch(error => {
-        console.error(error);
-        process.exit(1);
-    });
+    AdditionalDeploymentStorage.insertDeploymentAddressToFile("SafeProxyFactory", safeProxyFactoryAddress);
+    AdditionalDeploymentStorage.insertDeploymentAddressToFile("Safe", safeSingletonAddress);
+    AdditionalDeploymentStorage.insertDeploymentAddressToFile("SafeProxy", proxyAddress);
+
+});
