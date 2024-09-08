@@ -29,7 +29,8 @@
         "fmt:ts": "prettier 'src/**/*.ts' 'test/**/*.ts' -w",
         "prepack": "yarn build",
         "prepare": "husky install",
-        "prepublish": "yarn rimraf build && yarn build && yarn build:ts"
+        "prepublish": "yarn rimraf build && yarn build && yarn build:ts",
+        "hh": "hardhat"
     },
     "repository": {
         "type": "git",
