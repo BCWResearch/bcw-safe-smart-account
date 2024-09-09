@@ -48,7 +48,7 @@ task("deploy-proxy", "Deploys the proxy contract").setAction(async (_, hre) => {
     ]);
 
     // Deploying a proxy using createProxyWithNonce
-    const saltNonce = new Date().getTime(); // Random nonce for the proxy 
+    const saltNonce = 123;//new Date().getTime(); // Random nonce for the proxy 
     const tx = await SafeProxyFactory.createProxyWithNonce(safeSingletonAddress, initializer, saltNonce);
 
     // Wait for the transaction to be mined
