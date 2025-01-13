@@ -19,13 +19,16 @@ const argv = yargs
 
 // Load environment variables.
 dotenv.config();
-const { NODE_URL, INFURA_KEY, MNEMONIC, ETHERSCAN_API_KEY, PK, SOLIDITY_VERSION, SOLIDITY_SETTINGS, CUSTOM_RPC } = process.env;
+const { NODE_URL, INFURA_KEY, MNEMONIC, ETHERSCAN_API_KEY, PK,PK2, SOLIDITY_VERSION, SOLIDITY_SETTINGS, CUSTOM_RPC } = process.env;
 
 const DEFAULT_MNEMONIC = "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
 
 const sharedNetworkConfig: HttpNetworkUserConfig = {};
 if (PK) {
     sharedNetworkConfig.accounts = [PK];
+    if (PK2){
+        sharedNetworkConfig.accounts.push(PK2);
+    }
 } else {
     sharedNetworkConfig.accounts = {
         mnemonic: MNEMONIC || DEFAULT_MNEMONIC,
@@ -142,6 +145,10 @@ const userConfig: HardhatUserConfig = {
             ...sharedNetworkConfig,
             url: `https://api.avax.network/ext/bc/C/rpc`,
         },
+        amoy:{
+            ...sharedNetworkConfig,
+            url: "https://rpc-amoy.polygon.technology/",
+          },
     },
     deterministicDeployment,
     namedAccounts: {
